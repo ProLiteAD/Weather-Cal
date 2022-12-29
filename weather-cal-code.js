@@ -187,11 +187,26 @@ const weatherCal = {
   async getWeatherKey(firstRun = false) {
     const returnVal = await this.promptForText("Paste your API key in the box below.",[""],["82c29fdbgd6aebbb595d402f8a65fabf"])
     const apiKey = returnVal.textFieldValue(0)
-    if (!apiKey || apiKey == "" || apiKey == null) { return await this.generateAlert("No API key was entered. Try copying the key again and re-running this script.",["Exit"]) }
+    if (!apiKey || apiKey == "" || apiKey == null) {return await this.generateAlert("No API key was entered. Try copying the key again and re-running this script.",["Exit"]) }
 
     this.writePreference("weather-cal-api-key", apiKey)
-    const req = new Request("https://api.openweathermap.org/data/2.5/onecall?lat=37.332280&lon=-122.010980&appid=" + apiKey)
-    try { val = await req.loadJSON() } catch { val = { current: false } }
+    // const req = new Request("https://api.openweathermap.org/data/2.5/onecall?lat=37.332280&lon=-122.010980&appid=" + apiKey)
+    let req = `http://api.weatherapi.com/v1/current.json?key=&=${apiKey}&q=London&aqi=no`;
+    let request = new XMLHttpRequest();
+    request.open('GET', req);
+    request.send();
+
+    try {
+      request.onload = () =>{
+        val = JSON.parse(request.response);
+      }
+      // val = await req.loadJSON()
+    }
+    catch {
+      val = {
+        current: false
+      }
+    }
 
     if (!val.current) {
       const message = firstRun ? "New OpenWeather API keys may take a few hours to activate. Your widget will start displaying weather information once it's active." : "The key you entered, " + apiKey + ", didn't work. If it's a new key, it may take a few hours to activate."
@@ -867,9 +882,17 @@ const weatherCal = {
 	
 	if (!sunData || sunData.cacheExpired) {
 		try {
-			const apiKey = this.fm.readString(this.fm.joinPath(this.fm.libraryDirectory(), "weather-cal-api-key")).replace(/\"/g,"")
-			const sunReq = "https://api.openweathermap.org/data/2.5/onecall?lat=" + this.data.location.latitude + "&lon=" + this.data.location.longitude + "&exclude=minutely,alerts&units=" + this.settings.widget.units + "&lang=" + locale + "&appid=" + apiKey
-			sunData = await new Request(sunReq).loadJSON()
+			// const apiKey = this.fm.readString(this.fm.joinPath(this.fm.libraryDirectory(), "weather-cal-api-key")).replace(/\"/g,"")
+			// const sunReq = "https://api.openweathermap.org/data/2.5/onecall?lat=" + this.data.location.latitude + "&lon=" + this.data.location.longitude + "&exclude=minutely,alerts&units=" + this.settings.widget.units + "&lang=" + locale + "&appid=" + apiKey
+      const sunReq = `https://api.sunrise-sunset.org/json?lat=${this.data.location.latitude}&lng=${this.data.location.longitude}&date=today`;
+
+			// sunData = await new Request(sunReq).loadJSON()
+      let sunRequest = new XMLHttpRequest();
+      sunRequest.open("GET", sunReq);
+      sunRequest.send();
+      sunRequest.onload = () => {
+          sunData = JSON.parse(sunRequest.responseText);
+      }
 			if (sunData.cod) { sunData = null }
 			if (sunData) { this.fm.writeString(sunPath, JSON.stringify(sunData)) }
 		} catch {}
@@ -905,8 +928,16 @@ const weatherCal = {
     if (!weatherData || weatherData.cacheExpired) {
       try {
         const apiKey = this.fm.readString(this.fm.joinPath(this.fm.libraryDirectory(), "weather-cal-api-key")).replace(/\"/g,"")
-        const weatherReq = "https://api.openweathermap.org/data/2.5/onecall?lat=" + this.data.location.latitude + "&lon=" + this.data.location.longitude + "&exclude=minutely,alerts&units=" + this.settings.widget.units + "&lang=" + locale + "&appid=" + apiKey
-        weatherData = await new Request(weatherReq).loadJSON()
+        // const weatherReq = "https://api.openweathermap.org/data/2.5/onecall?lat=" + this.data.location.latitude + "&lon=" + this.data.location.longitude + "&exclude=minutely,alerts&units=" + this.settings.widget.units + "&lang=" + locale + "&appid=" + apiKey
+        const weatherReq = `http://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${this.data.location.latitude},${this.data.location.latitude}&aqi=no`;
+
+        // weatherData = await new Request(weatherReq).loadJSON()
+        let request = new XMLHttpRequest();
+        request.open('GET', req);
+        request.send();
+        request.onload = () => {
+            weatherData = JSON.parse(request.response);
+        }
         if (weatherData.cod) { weatherData = null }
         if (weatherData) { this.fm.writeString(weatherPath, JSON.stringify(weatherData)) }
       } catch {}
